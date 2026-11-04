@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GR PERFUME – בדיקת תאימות מסך</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #111; color: #eee;
+    font-family: Arial, "Segoe UI", sans-serif; }
+  .wrap { padding: 24px 32px; }
+  h1 { margin: 0 0 4px 0; font-size: 34px; color: #d4af37; }
+  .sub { font-size: 18px; color: #aaa; margin-bottom: 18px; }
+  .summary { font-size: 26px; padding: 12px 16px; margin-bottom: 18px;
+    background: #222; border-right: 6px solid #d4af37; }
+  table { border-collapse: collapse; width: 100%; font-size: 19px; }
+  td { padding: 5px 10px; border-bottom: 1px solid #333; vertical-align: top; }
+  td.k { color: #bbb; width: 38%; }
+  .ok { color: #4caf50; font-weight: bold; }
+  .no { color: #f44336; font-weight: bold; }
+  .mid { color: #ff9800; font-weight: bold; }
+  .ua { direction: ltr; text-align: left; font-family: monospace; font-size: 15px;
+    color: #9cf; word-break: break-all; }
+  .cols { overflow: hidden; }
+  .col { float: right; width: 49%; margin-left: 2%; }
+  .col.last { margin-left: 0; }
+  #clock { font-size: 22px; color: #d4af37; }
+  #vidbox { margin-top: 10px; }
+  video { width: 320px; height: 180px; background: #000; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GR PERFUME – בדיקת תאימות</h1>
+  <div class="sub">הדף רק קורא נתונים ומציג אותם. הוא לא משנה שום הגדרה במכשיר. <span id="clock"></span></div>
+  <div class="summary" id="summary">בודק...</div>
+  <div class="cols">
+    <div class="col"><table id="t1"></table></div>
+    <div class="col last"><table id="t2"></table>
+      <div id="vidbox">
+        <div style="font-size:17px;color:#aaa">בדיקת ניגון וידאו (MP4 / H.264):</div>
+        <video id="vid" muted autoplay loop playsinline
+          src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video>
+        <div id="vidres" style="font-size:18px">ממתין...</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:14px;font-size:16px;color:#aaa">User Agent:</div>
+  <div class="ua" id="ua"></div>
+</div>
+
+<script>
+// ES5 בלבד – כדי שיעבוד גם בדפדפנים ישנים
+(function () {
+  var rows1 = [], rows2 = [], score = 0, total = 0;
+  var ua = navigator.userAgent || "";
+
+  function add(list, key, val, cls) { list.push([key, val, cls || ""]); }
+  function test(list, key, ok, important) {
+    if (important) { total++; if (ok) score++; }
+    add(list, key, ok ? "כן ✔" : "לא ✘", ok ? "ok" : (important ? "no" : "mid"));
+  }
+  function m(re) { var r = ua.match(re); return r ? r[1] : "לא זוהה"; }
+  function cssSupports(p, v) {
+    try { return !!(window.CSS && CSS.supports && CSS.supports(p, v)); } catch (e) { return false; }
+  }
+  function canPlay(type) {
+    try { var v = document.createElement("video"); var r = v.canPlayType(type);
+      return r === "probably" ? "כן ✔" : (r === "maybe" ? "אולי" : "לא ✘"); } catch (e) { return "לא ✘"; }
+  }
+
+  // --- מידע על המכשיר ---
+  add(rows1, "גרסת Android", m(/Android\s([\d\.]+)/));
+  add(rows1, "גרסת Chrome / WebView", m(/Chrome\/([\d\.]+)/));
+  add(rows1, "WebView?", /; wv\)/.test(ua) || /Version\/[\d\.]+ Chrome/.test(ua) ? "כן (WebView)" : "דפדפן רגיל / לא ידוע");
+  add(rows1, "רזולוציית מסך", screen.width + " × " + screen.height);
+  add(rows1, "גודל חלון בפועל", window.innerWidth + " × " + window.innerHeight);
+  add(rows1, "יחס פיקסלים", String(window.devicePixelRatio || 1));
+  add(rows1, "כיוון", window.innerWidth >= window.innerHeight ? "אופקי" : "אנכי");
+  add(rows1, "מעבדים (ליבות)", String(navigator.hardwareConcurrency || "לא ידוע"));
+  add(rows1, "זיכרון (GB)", String(navigator.deviceMemory || "לא ידוע"));
+  add(rows1, "שפת הדפדפן", navigator.language || "לא ידוע");
+  add(rows1, "אזור זמן", (function () {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "לא ידוע"; } catch (e) { return "לא נתמך"; }
+  })());
+  add(rows1, "חיבור לאינטרנט", navigator.onLine ? "מחובר" : "לא מחובר", navigator.onLine ? "ok" : "no");
+
+  // --- יכולות חשובות ---
+  test(rows2, "Flexbox", cssSupports("display", "flex") || ("flexBasis" in document.body.style), true);
+  test(rows2, "CSS Grid", cssSupports("display", "grid"), false);
+  test(rows2, "משתני CSS", cssSupports("--a", "0"), false);
+  test(rows2, "Promise", typeof Promise !== "undefined", true);
+  test(rows2, "fetch", typeof fetch !== "undefined", false);
+  test(rows2, "XMLHttpRequest", typeof XMLHttpRequest !== "undefined", true);
+  test(rows2, "localStorage", (function () {
+    try { localStorage.setItem("_t", "1"); localStorage.removeItem("_t"); return true; } catch (e) { return false; }
+  })(), true);
+  test(rows2, "Service Worker (מצב לא מקוון)", "serviceWorker" in navigator, false);
+  test(rows2, "Cache API", "caches" in window, false);
+  test(rows2, "WebSocket", typeof WebSocket !== "undefined", false);
+  test(rows2, "EventSource", typeof EventSource !== "undefined", false);
+  test(rows2, "ES6 (let / חצים)", (function () {
+    try { new Function("let a = () => 1; return a();")(); return true; } catch (e) { return false; }
+  })(), false);
+  test(rows2, "תאריך בעברית (Intl)", (function () {
+    try { return /[֐-׿]/.test(new Date().toLocaleDateString("he-IL", { weekday: "long" })); } catch (e) { return false; }
+  })(), false);
+  add(rows2, "וידאו H.264 (MP4)", canPlay('video/mp4; codecs="avc1.42E01E"'));
+  add(rows2, "וידאו VP9 (WebM)", canPlay('video/webm; codecs="vp9"'));
+  add(rows2, "וידאו HEVC (H.265)", canPlay('video/mp4; codecs="hvc1"'));
+
+  function render(id, rows) {
+    var t = document.getElementById(id), html = "";
+    for (var i = 0; i < rows.length; i++) {
+      html += "<tr><td class='k'>" + rows[i][0] + "</td><td class='" + rows[i][2] + "'>" + rows[i][1] + "</td></tr>";
+    }
+    t.innerHTML = html;
+  }
+  render("t1", rows1); render("t2", rows2);
+  document.getElementById("ua").innerHTML = ua.replace(/</g, "&lt;");
+
+  var s = document.getElementById("summary");
+  if (score === total) { s.innerHTML = "<span class='ok'>תקין ✔</span> – כל היכולות הבסיסיות נתמכות (" + score + "/" + total + ")"; }
+  else { s.innerHTML = "<span class='no'>חסרות יכולות בסיסיות</span> – " + score + "/" + total + ". צלם את המסך ושלח לי."; }
+
+  // שעון
+  function pad(n) { return n < 10 ? "0" + n : n; }
+  function tick() { var d = new Date();
+    document.getElementById("clock").innerHTML = "| שעה במכשיר: " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
+  tick(); setInterval(tick, 1000);
+
+  // וידאו
+  var v = document.getElementById("vid"), vr = document.getElementById("vidres");
+  v.addEventListener("playing", function () { vr.innerHTML = "<span class='ok'>הווידאו מתנגן ✔</span>"; });
+  v.addEventListener("error", function () { vr.innerHTML = "<span class='no'>שגיאה בניגון הווידאו ✘</span>"; });
+  setTimeout(function () { if (v.paused) { vr.innerHTML = "<span class='mid'>הווידאו לא התחיל לבד (יכול להיות שאין ניגון אוטומטי)</span>"; } }, 8000);
+})();
+</script>
+</body>
+</html>
