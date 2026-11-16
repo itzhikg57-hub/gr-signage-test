@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" manifest="probe.appcache">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GR – בדיקת שרת</title>
+<style>html,body{margin:0;background:#111;color:#eee;font-family:Arial,sans-serif}.w{padding:26px 30px}
+h1{color:#d4af37;font-size:36px;margin:0 0 8px}.big{font-size:30px;margin:10px 0 18px;color:#4caf50}
+table{width:100%;border-collapse:collapse;font-size:23px}td{padding:12px 8px;border-bottom:1px solid #2a2a2a;vertical-align:top}
+.ok{color:#4caf50;font-weight:bold}.no{color:#f44336;font-weight:bold}.wait{color:#ff9800}.s{font-size:15px;color:#999;direction:ltr;text-align:left}</style></head>
+<body><div class="w">
+<h1>GR PERFUME – בדיקת השרת שלנו</h1>
+<div class="big">✔ הדף נפתח מ-grperfume.mooo.com</div>
+<table>
+<tr><td>שעה בעמדה</td><td id="clock"></td></tr>
+<tr><td>1. ניגון שיר מהשרת שלנו (http)</td><td id="a" class="wait">בודק...</td></tr>
+<tr><td>2. שמירת הדף בעמדה (לעבודה בלי אינטרנט)</td><td id="c" class="wait">בודק...</td></tr>
+<tr><td>3. נפתח עכשיו מ...</td><td id="o" class="wait"></td></tr>
+<tr><td>4. קריאת קובץ הגדרות מהשרת</td><td id="j" class="wait">בודק...</td></tr>
+</table>
+<div class="s" id="ua" style="margin-top:14px"></div>
+</div>
+<script>
+(function () {
+  function $(i) { return document.getElementById(i); }
+  function set(id, ok, t) { $(id).className = ok ? "ok" : "no"; $(id).innerHTML = (ok ? "עובד ✔ " : "לא עובד ✘ ") + "<span style='font-size:16px;color:#bbb;font-weight:normal'>" + t + "</span>"; }
+  function pad(n) { return n < 10 ? "0" + n : n; }
+  setInterval(function () { var d = new Date(); $("clock").innerHTML = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }, 1000);
+  $("ua").innerHTML = navigator.userAgent;
+  $("o").innerHTML = navigator.onLine ? "אינטרנט מחובר" : "בלי אינטרנט (מהזיכרון של העמדה)";
+  // 1. שיר
+  var a = new Audio(), done = false;
+  function fin(ok, t) { if (done) return; done = true; set("a", ok, t); setTimeout(function () { try { a.pause(); } catch (e) {} }, 8000); }
+  a.addEventListener("playing", function () { setTimeout(function () { fin(a.currentTime > 0.5, "מנגן (" + Math.round(a.currentTime) + " שנ')"); }, 4000); });
+  a.addEventListener("error", function () { fin(false, "שגיאה " + (a.error && a.error.code)); });
+  setTimeout(function () { fin(false, "לא התנגן תוך 25 שנ'"); }, 25000);
+  a.volume = 0.6; a.src = "song-bh5zl9ve.mp3";
+  try { var p = a.play(); if (p && p["catch"]) p["catch"](function () {}); } catch (e) {}
+  // 2. AppCache
+  var ac = window.applicationCache;
+  if (!ac) set("c", false, "לא נתמך");
+  else {
+    var names = ["UNCACHED", "IDLE", "CHECKING", "DOWNLOADING", "UPDATEREADY", "OBSOLETE"];
+    var upd = function () {
+      var st = names[ac.status] || ac.status;
+      if (ac.status === 1 || ac.status === 4) set("c", true, "נשמר בעמדה (" + st + ")");
+      else $("c").innerHTML = "מצב: " + st + "...";
+    };
+    var evs = ["cached", "noupdate", "updateready", "checking", "downloading"];
+    for (var i = 0; i < evs.length; i++) ac.addEventListener(evs[i], upd);
+    ac.addEventListener("error", function () { set("c", false, "שגיאה בשמירה"); });
+    setTimeout(upd, 500);
+  }
+  // 4. JSON
+  try {
+    var x = new XMLHttpRequest(); x.open("GET", "probe.json?r=" + Date.now(), true);
+    x.onload = function () { try { var d = JSON.parse(x.responseText); set("j", !!d.ok, d.msg); } catch (e) { set("j", false, "קובץ לא תקין"); } };
+    x.onerror = function () { set("j", false, "שגיאת רשת"); };
+    x.send();
+  } catch (e) { set("j", false, e.message); }
+})();
+</script></body></html>
